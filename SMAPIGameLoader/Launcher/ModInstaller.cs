@@ -49,7 +49,7 @@ internal static class ModInstaller
     {
         if (!SMAPIInstaller.IsInstalled)
         {
-            ToastNotifyTool.Notify("Can't check mod, please install SMAPI first!!");
+            ToastNotifyTool.Notify("Cannot check mod, please install SMAPI first!");
             return false;
         }
 
@@ -57,7 +57,7 @@ internal static class ModInstaller
         var minGameVersion = GetMinGameVersion(manifest);
         if (minGameVersion != null && minGameVersion < new Version(1, 6, 0))
         {
-            ToastNotifyTool.Notify("Not support for game version 1.6");
+            ToastNotifyTool.Notify("Not supported for game version 1.6");
             return false;
         }
 
@@ -65,11 +65,11 @@ internal static class ModInstaller
         var minSMAPIVersion = GetMinSMAPIVersion(manifest);
         if (minSMAPIVersion != null && minSMAPIVersion < new Version(4, 0, 0))
         {
-            ToastNotifyTool.Notify("Not support for game version 1.6");
+            ToastNotifyTool.Notify("Not supported for game version 1.6");
             return false;
         }
 
-        // Check if it's a content pack
+        // Check if it is a content pack
         bool isContentPack = manifest.ContainsKey("ContentPackFor");
         return true;
     }
@@ -87,7 +87,7 @@ internal static class ModInstaller
         var fileInfo = new FileInfo(zipFilePath);
         logBuilder.AppendLine("Mod zip: " + fileInfo.Name);
         logBuilder.AppendLine("");
-        logBuilder.AppendLine("List mods: " + manifestEntries.Length);
+        logBuilder.AppendLine("List of mods: " + manifestEntries.Length);
         for (int i = 0; i < manifestEntries.Length; i++)
         {
             var manifestEntry = manifestEntries[i];
@@ -114,7 +114,7 @@ internal static class ModInstaller
             var manifestEntries = entries.Where(entry => entry.Name == ModTool.ManifiestFileName).ToArray();
             if (manifestEntries.Length == 0)
             {
-                ToastNotifyTool.Notify("Not found manifest.json");
+                ToastNotifyTool.Notify("Manifest.json not found");
                 return;
             }
 
