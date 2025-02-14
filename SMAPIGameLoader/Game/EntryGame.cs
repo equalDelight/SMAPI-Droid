@@ -1,7 +1,8 @@
-﻿using Android.App;
+using Android.App;
 using Android.Content;
 using SMAPIGameLoader.Launcher;
 using System;
+using System.Threading.Tasks;
 
 namespace SMAPIGameLoader;
 internal static class EntryGame
@@ -10,24 +11,24 @@ internal static class EntryGame
     {
         TaskTool.Run(launcherActivity, async () =>
         {
-            LaunchGameActivityInternal(launcherActivity);
+            await LaunchGameActivityInternalAsync(launcherActivity);
         });
     }
 
-    static void LaunchGameActivityInternal(Activity launcherActivity)
+    static async Task LaunchGameActivityInternalAsync(Activity launcherActivity)
     {
         //ToastNotifyTool.Notify("Starting Game..");
         //check game it's can launch with version
 
         try
         {
-            if (StardewApkTool.IsGameVersionSupport == false)
+            if (!StardewApkTool.IsGameVersionSupport)
             {
                 ToastNotifyTool.Notify("Not support game version: " + StardewApkTool.CurrentGameVersion + ", please update game");
                 return;
             }
 
-            if (SMAPIInstaller.IsInstalled is false)
+            if (!SMAPIInstaller.IsInstalled)
             {
                 ToastNotifyTool.Notify("Please install SMAPI!!");
                 return;
@@ -39,15 +40,14 @@ internal static class EntryGame
             ToastNotifyTool.Notify("Error can't start game on Debug Mode");
             return;
 #endif
-
             StartSMAPIActivity(launcherActivity);
         }
         catch (Exception ex)
         {
-            ToastNotifyTool.Notify("Error:LaunchGameActivity: " + ex.ToString());
+            ToastNotifyTool.Notify("Error: LaunchGameActivity: " + ex.ToString());
         }
     }
-    //prevent Load Game Assembly in scope function LaunchGameActivityInternal()
+
     static void StartSMAPIActivity(Activity launcherActivity)
     {
         var intent = new Intent(launcherActivity, typeof(SMAPIActivity));
