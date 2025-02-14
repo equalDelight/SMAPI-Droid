@@ -1,130 +1,132 @@
-﻿using Android.App;
+using Android.App;
 using Android.OS;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Org.Json;
 using SMAPIGameLoader.Game.Rewriter;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Xamarin.Essentials;
 using static SMAPIGameLoader.Launcher.GameCloner;
 
 namespace SMAPIGameLoader.Launcher;
 
+// Class responsible for cloning the game and managing its state
 internal static class GameCloner
 {
     public const string ClonerStateFileName = "cloner_state.json";
     public static string ClonerStateFilePath => Path.Combine(FileTool.ExternalFilesDir, ClonerStateFileName);
 
+    // Class representing the state of the game cloner
     public sealed class ClonerState
     {
-        //for detect should Cloner again
+        // Properties to track the last launcher build code and game version
         public int LastLauncherBuildCode { get; set; } = 0;
         public string LastGameVersionString { get; set; } = "0.0.0.0";
 
+        // Save the current state to a file
         public void SaveToFile()
         {
             string jsonString = JsonConvert.SerializeObject(this, Formatting.Indented);
             File.WriteAllText(ClonerStateFilePath, jsonString);
-            Console.WriteLine("done save ClonerState into file");
+            Console.WriteLine("Saved ClonerState to file");
         }
-        public void MarkCloenGameDone()
+
+        // Mark the game cloning process as done
+        public void MarkCloneGameDone()
         {
             this.LastLauncherBuildCode = ApkTool.LauncherBuildCode;
             this.LastGameVersionString = StardewApkTool.CurrentGameVersion.ToString();
         }
+
+        // Check if the game needs to be cloned again
         public bool IsNeedToCloneGame()
         {
-            //check if you have edit logic or new launcher version
-            Console.WriteLine("last build code: " + LastLauncherBuildCode);
+            // Check if the launcher build code has changed
+            Console.WriteLine("Last build code: " + LastLauncherBuildCode);
             if (ApkTool.LauncherBuildCode != LastLauncherBuildCode)
                 return true;
 
-            //check if has new update game
+            // Check if there is a new game update
             if (StardewApkTool.CurrentGameVersion != new Version(LastGameVersionString))
                 return true;
 
-            //don't clone game again
+            // No need to clone the game again
             return false;
         }
     }
+
+    // Retrieve the current cloner state from the file
     public static ClonerState GetClonerState()
     {
         try
         {
-            //throw exception here if file never crate
             var jsonString = File.ReadAllText(ClonerStateFilePath);
             var clonerState = JsonConvert.DeserializeObject<ClonerState>(jsonString);
             return clonerState ?? new ClonerState();
         }
         catch (Exception ex)
         {
-            //Recreate Game Cloner State always
+            // If an exception occurs, recreate the cloner state
             return new ClonerState();
         }
     }
+
+    // Set up the game cloner and verify assets and assemblies
     public static void Setup()
     {
         ClonerState clonerState = GetClonerState();
-        TaskTool.NewLine("Try to assert game clone");
+        TaskTool.NewLine("Asserting game clone");
 
-        bool isNeedCloenGame = clonerState.IsNeedToCloneGame();
+        bool isNeedCloneGame = clonerState.IsNeedToCloneGame();
 
-        //clone each section
-
-        if (isNeedCloenGame)
+        if (isNeedCloneGame)
         {
-            TaskTool.NewLine("Starting cloner game assets");
-            //clone game assets
+            TaskTool.NewLine("Starting game asset cloning");
+            // Verify game assets
             GameAssetManager.VerifyAssets();
-            TaskTool.NewLine("Done verify asset");
+            TaskTool.NewLine("Assets verified");
+            // Verify game assemblies
             GameAssemblyManager.VerifyAssemblies();
-            TaskTool.NewLine("Done verify assemblies");
+            TaskTool.NewLine("Assemblies verified");
+            // Verify game libraries
             GameAssemblyManager.VerifyLibs();
-            TaskTool.NewLine("Done verify libs");
+            TaskTool.NewLine("Libraries verified");
         }
 
-        //Load MonoGame.Framework.dll into reference
+        // Load MonoGame.Framework.dll into reference
         GameAssemblyManager.LoadAssembly(GameAssemblyManager.MonoGameDLLFileName);
 
-        //Rewrite StardewValley.dll
-        if (isNeedCloenGame)
+        // Rewrite StardewValley.dll if needed
+        if (isNeedCloneGame)
         {
-            TaskTool.NewLine("Try rewriter StardewValley.dll");
-            using (var stardewAssemblyStream = File.Open(GameAssemblyManager.StardewValleyFilePath,
-                FileMode.Open, FileAccess.ReadWrite))
+            TaskTool.NewLine("Rewriting StardewValley.dll");
+            using (var stardewAssemblyStream = File.Open(GameAssemblyManager.StardewValleyFilePath, FileMode.Open, FileAccess.ReadWrite))
             {
-
-                TaskTool.NewLine("Starting StardewValley Rewriter...");
+                TaskTool.NewLine("Starting StardewValley rewriter...");
                 var stardewAssemblyDef = StardewGameRewriter.ReadAssembly(stardewAssemblyStream);
                 StardewGameRewriter.Rewrite(stardewAssemblyDef);
                 StardewAudioRewriter.Rewrite(stardewAssemblyDef);
 
-                TaskTool.NewLine("Try save StardewValley rewriter to file..");
+                TaskTool.NewLine("Saving rewritten StardewValley.dll to file...");
                 stardewAssemblyDef.Write();
-                TaskTool.NewLine("Successfully Rewrite StardewValley.dll");
+                TaskTool.NewLine("Successfully rewrote StardewValley.dll");
             }
 
-            //Don't load StardewValley assembly here
-            //you should load at SMAPIActivity
-            //Assembly.LoadFrom(stardewDllFilePath);
+            // Do not load StardewValley assembly here; load it in SMAPIActivity
         }
 
-        //Finally
-        if (isNeedCloenGame)
+        // Finalize the setup
+        if (isNeedCloneGame)
         {
-            //mark
-            clonerState.MarkCloenGameDone();
+            // Mark the cloning process as done and save the state
+            clonerState.MarkCloneGameDone();
             clonerState.SaveToFile();
-            TaskTool.NewLine("Done save cloner state to file");
+            TaskTool.NewLine("Saved cloner state to file");
         }
 
-        TaskTool.NewLine("Done assert game clone");
+        TaskTool.NewLine("Game clone assertion complete");
     }
 }
