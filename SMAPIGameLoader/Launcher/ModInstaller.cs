@@ -49,7 +49,7 @@ internal static class ModInstaller
     {
         if (!SMAPIInstaller.IsInstalled)
         {
-            ToastNotifyTool.Notify("Cannot check mod, please install SMAPI first!");
+            ToastNotifyTool.Notify("The mods cannot be checked, please install SMAPI first!");
             return false;
         }
 
@@ -57,7 +57,7 @@ internal static class ModInstaller
         var minGameVersion = GetMinGameVersion(manifest);
         if (minGameVersion != null && minGameVersion < new Version(1, 6, 0))
         {
-            ToastNotifyTool.Notify("Not supported for game version 1.6");
+            ToastNotifyTool.Notify("Game version 1.6 is not supported.");
             return false;
         }
 
@@ -65,7 +65,7 @@ internal static class ModInstaller
         var minSMAPIVersion = GetMinSMAPIVersion(manifest);
         if (minSMAPIVersion != null && minSMAPIVersion < new Version(4, 0, 0))
         {
-            ToastNotifyTool.Notify("Not supported for game version 1.6");
+            ToastNotifyTool.Notify("SMAPI Versions is outdated.");
             return false;
         }
 
@@ -97,7 +97,7 @@ internal static class ModInstaller
         }
 
         // Show the installed mod pack
-        DialogTool.Show("Installed Mod Pack", logBuilder.ToString());
+        DialogTool.Show("Installed Mod Packs", logBuilder.ToString());
     }
 
     // Handle the mod installation process
