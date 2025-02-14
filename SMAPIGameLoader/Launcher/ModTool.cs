@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,30 +9,38 @@ namespace SMAPIGameLoader.Launcher;
 
 internal static class ModTool
 {
+    // Directory name for mods
     const string ModsDirName = "Mods";
+
+    // Property to get the full path to the mods directory
     public static string ModsDir { get; } = Path.Combine(FileTool.ExternalFilesDir, ModsDirName);
 
+    // Manifest file name
     public static string ManifiestFileName = "manifest.json";
+
+    // Method to find manifest files in the specified directory and its subdirectories
     public static void FindManifestFile(string rootDirPath, List<string> manifestFiles)
     {
         try
         {
-            if (Directory.Exists(rootDirPath) is false)
+            // Check if the root directory exists
+            if (!Directory.Exists(rootDirPath))
                 return;
 
-            //search current only 1
+            // Search for the manifest file in the current directory
             var manifestFilePath = Path.Combine(rootDirPath, ManifiestFileName);
-            //assert manifest file invalid path
+
+            // If the current directory is not the mods directory, add the manifest file to the list if it exists
             if (rootDirPath != ModsDir)
             {
-                if (Path.Exists(manifestFilePath))
+                if (File.Exists(manifestFilePath))
                 {
                     manifestFiles.Add(manifestFilePath);
                     return;
                 }
             }
 
-            //search with next folder
+            // Recursively search for manifest files in subdirectories
             var folders = Directory.GetDirectories(rootDirPath);
             foreach (var folderPath in folders)
             {
@@ -41,8 +49,8 @@ internal static class ModTool
         }
         catch (Exception ex)
         {
+            // Log any exceptions that occur
             Console.WriteLine(ex);
         }
-
     }
 }
