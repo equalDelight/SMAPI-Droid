@@ -24,20 +24,20 @@ internal static class EntryGame
         {
             if (!StardewApkTool.IsGameVersionSupport)
             {
-                ToastNotifyTool.Notify("Not support game version: " + StardewApkTool.CurrentGameVersion + ", please update game");
+                ToastNotifyTool.Notify("Your current game version (" + StardewApkTool.CurrentGameVersion + ") is not supported, please update the game to the latest version.");
                 return;
             }
 
             if (!SMAPIInstaller.IsInstalled)
             {
-                ToastNotifyTool.Notify("Please install SMAPI!!");
+                ToastNotifyTool.Notify("Please install SMAPI.");
                 return;
             }
 
             GameCloner.Setup();
 
 #if DEBUG
-            ToastNotifyTool.Notify("Error can't start game on Debug Mode");
+            ToastNotifyTool.Notify("Error can't start the game on Debug Mode");
             return;
 #endif
             StartSMAPIActivity(launcherActivity);
