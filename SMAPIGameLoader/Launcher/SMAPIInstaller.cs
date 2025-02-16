@@ -15,8 +15,8 @@ namespace SMAPIGameLoader.Launcher;
 
 internal static class SMAPIInstaller
 {
-    public const string GithubOwner = "NRTnarathip";
-    public const string GithubRepoName = "SMAPI-Android-1.6";
+    public const string GithubOwner = "equalDelight";
+    public const string GithubRepoName = "SMAPI-Droid";
 
     // Get the build code of the installed SMAPI
     public static long GetBuildCode()

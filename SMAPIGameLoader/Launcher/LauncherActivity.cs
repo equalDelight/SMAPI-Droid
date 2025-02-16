@@ -9,7 +9,6 @@ using Xamarin.Essentials;
 using AndroidX.AppCompat.App;
 using System.Text;
 
-
 namespace SMAPIGameLoader.Launcher;
 
 [Activity(
@@ -36,14 +35,14 @@ public class LauncherActivity : AppCompatActivity
         Platform.Init(this, savedInstanceState);
         ActivityTool.Init(this);
 
-        //assert
+        // Assert requirements
         AssertRequirement();
 
-        //ready
+        // Setup layout and UI
         OnReadyToSetupLayoutPage();
         SetDarkMode();
 
-        //run utils scripts
+        // Run utility scripts
         ProcessAdbExtras();
     }
 
@@ -53,7 +52,7 @@ public class LauncherActivity : AppCompatActivity
     }
 
     /// <summary>
-    ///     Receive argument launch activity
+    /// Process ADB extras to handle specific actions
     /// </summary>
     private void ProcessAdbExtras()
     {
@@ -67,28 +66,32 @@ public class LauncherActivity : AppCompatActivity
     {
         try
         {
-            if (StardewApkTool.IsInstalled == false)
+            if (!StardewApkTool.IsInstalled)
             {
                 var currentPackage = StardewApkTool.CurrentPackageInfo;
                 if (currentPackage != null)
+                {
                     switch (currentPackage.PackageName)
                     {
                         case StardewApkTool.GamePlayStorePackageName:
-                            ToastNotifyTool.Notify("Please Download Game From Play Store");
+                            ToastNotifyTool.Notify("Please download the game from Play Store");
                             break;
                         case StardewApkTool.GameGalaxyStorePackageName:
-                            ToastNotifyTool.Notify("Please Download Game From Galaxy Store");
+                            ToastNotifyTool.Notify("Please download the game from Galaxy Store");
                             break;
                     }
+                }
                 else
-                    ToastNotifyTool.Notify("Please Download Game From Play Store Or Galaxy Store");
+                {
+                    ToastNotifyTool.Notify("Please download the game from Play Store or Galaxy Store");
+                }
 
                 return false;
             }
         }
         catch (Exception ex)
         {
-            ToastNotifyTool.Notify("err;" + ex);
+            ToastNotifyTool.Notify("Error: " + ex);
             return false;
         }
 
@@ -97,54 +100,51 @@ public class LauncherActivity : AppCompatActivity
 
     private void AssertRequirement()
     {
-        //check if 32bit not support
-        if (IsDeviceSupport is false)
+        // Check if the device is 32-bit, which is not supported
+        if (!IsDeviceSupport)
         {
-            ToastNotifyTool.Notify("Not support on device 32bit");
+            ToastNotifyTool.Notify("Not supported on 32-bit devices");
             Finish();
             return;
         }
 
-        //Assert Game Requirement
-        if (AssetGameVerify() == false)
+        // Assert game requirements
+        if (!AssetGameVerify())
         {
             Finish();
             return;
         }
-
     }
-
 
     private void OnReadyToSetupLayoutPage()
     {
-
-        //setup bind events
+        // Setup and bind UI events
         try
         {
             FindViewById<Button>(ResourceConstant.Id.InstallSMAPIZip).Click += SMAPIInstaller.OnClickInstallSMAPIZip;
             FindViewById<Button>(ResourceConstant.Id.UploadLog).Click += LogParser.OnClickUploadLog;
-            //Work In Progress
-            //FindViewById<Button>(ResourceConstant.Id.SaveImportFromSavesZip).Click += SaveManager.OnClickImportSaveZip;
+            // Work In Progress
+            /// FindViewById<Button>(ResourceConstant.Id.SaveImportFromSavesZip).Click += SaveManager.OnClickImportSaveZip;
 
             var startGameBtn = FindViewById<Button>(ResourceConstant.Id.StartGame);
-            startGameBtn.Click += (sender, e) => { OnClickStartGame(); };
+            startGameBtn.Click += (sender, e) => OnClickStartGame();
             var modManagerBtn = FindViewById<Button>(ResourceConstant.Id.ModManagerBtn);
-            modManagerBtn.Click += (sender, e) => { ActivityTool.SwapActivity<ModManagerActivity>(this, false); };
+            modManagerBtn.Click += (sender, e) => ActivityTool.SwapActivity<ModManagerActivity>(this, false);
 
             SMAPIInstaller.OnInstalledSMAPI += NotifyInstalledSMAPIInfo;
         }
         catch (Exception ex)
         {
-            ToastNotifyTool.Notify("Error: Try to setup bind UI Event");
+            ToastNotifyTool.Notify("Error: Failed to setup UI event bindings");
             ErrorDialogTool.Show(ex);
             return;
         }
 
-        //set launcher text info
+        // Set launcher text info
         try
         {
             var launcherInfoLines = new StringBuilder();
-            //set app version
+            // Set app version
             launcherInfoLines.AppendLine("Launcher Version: " + AppInfo.VersionString);
 
             var buildDateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(int.Parse(AppInfo.BuildString));
@@ -152,31 +152,28 @@ public class LauncherActivity : AppCompatActivity
             var localDateTimeString = localDateTimeOffset.ToString("HH:mm:ss dd/MM/yyyy");
             launcherInfoLines.AppendLine($"Build: {localDateTimeString} (d/m/y)");
 
-            //set support game version
-            launcherInfoLines.AppendLine($"Support Game Version: {StardewApkTool.GameVersionSupport} Or Later");
+            // Set supported game version
+            launcherInfoLines.AppendLine($"Supported Game Version: {StardewApkTool.GameVersionSupport} or later");
             launcherInfoLines.AppendLine("Your Game Version: " + StardewApkTool.CurrentGameVersion);
-            launcherInfoLines.AppendLine("Discord: Stardew SMAPI Thailand");
-            launcherInfoLines.AppendLine("Owner: NRTnarathip");
+            /// launcherInfoLines.AppendLine("Discord: Stardew SMAPI Thailand");
+            /// launcherInfoLines.AppendLine("Owner: NRTnarathip");
 
             FindViewById<TextView>(ResourceConstant.Id.launcherInfoTextView).Text = launcherInfoLines.ToString();
-
         }
         catch (Exception ex)
         {
-            ToastNotifyTool.Notify("Error:Try setup app text info: " + ex);
+            ToastNotifyTool.Notify("Error: Failed to setup app text info: " + ex);
             ErrorDialogTool.Show(ex);
         }
 
-        //init ui info
+        // Initialize UI info
         NotifyInstalledSMAPIInfo();
-
-
     }
 
     private void NotifyInstalledSMAPIInfo()
     {
         var smapiInstallInfo = FindViewById<TextView>(ResourceConstant.Id.SMAPIInstallInfoTextView);
-        if (SMAPIInstaller.IsInstalled is false)
+        if (!SMAPIInstaller.IsInstalled)
         {
             smapiInstallInfo.Text = "Please install SMAPI!!";
             return;
@@ -192,6 +189,6 @@ public class LauncherActivity : AppCompatActivity
     {
         Console.WriteLine("On click start game");
         EntryGame.LaunchGameActivity(this);
-        Console.WriteLine("done continue UI runner");
+        Console.WriteLine("Done continuing UI runner");
     }
 }

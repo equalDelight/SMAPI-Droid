@@ -1,5 +1,4 @@
 ﻿using Mono.Cecil;
-using MonoMod.Utils;
 using System;
 using System.Linq;
 
@@ -7,12 +6,19 @@ namespace SMAPIGameLoader.Game.Rewriter;
 
 internal static class StardewRewriterTool
 {
-    static AssemblyDefinition assemblyDefinition;
-    static ModuleDefinition mainModule;
+    private static AssemblyDefinition assemblyDefinition;
+    private static ModuleDefinition mainModule;
+
+    // Initialize the rewriter tool with the given assembly definition
     internal static void Init(AssemblyDefinition stardewAsmDef)
     {
-        StardewRewriterTool.assemblyDefinition = stardewAsmDef;
+        assemblyDefinition = stardewAsmDef;
         mainModule = stardewAsmDef.MainModule;
     }
-    internal static TypeDefinition FindType(string fname) => mainModule.Types.Single(t => t.FullName == fname);
+
+    // Find a type in the main module by its full name
+    internal static TypeDefinition FindType(string fullName)
+    {
+        return mainModule.Types.Single(t => t.FullName == fullName);
+    }
 }

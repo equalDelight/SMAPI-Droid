@@ -12,7 +12,6 @@
 		<ApplicationDisplayVersion>1.1.4</ApplicationDisplayVersion>
 		<ApplicationVersion>$([System.DateTimeOffset]::Now.ToUnixTimeSeconds())</ApplicationVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<AndroidPackageFormat>apk</AndroidPackageFormat>
