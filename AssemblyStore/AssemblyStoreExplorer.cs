@@ -9,11 +9,11 @@ namespace Xamarin.Android.AssemblyStore
 {
     public class AssemblyStoreExplorer
     {
-        AssemblyStoreReader? indexStore;
-        AssemblyStoreManifestReader? manifest;
-        int numberOfStores = 0;
-        Action<AssemblyStoreExplorerLogLevel, string>? logger;
-        bool keepStoreInMemory;
+        private AssemblyStoreReader? indexStore;
+        private AssemblyStoreManifestReader? manifest;
+        private int numberOfStores = 0;
+        private Action<AssemblyStoreExplorerLogLevel, string>? logger;
+        private bool keepStoreInMemory;
 
         public IDictionary<string, AssemblyStoreAssembly> AssembliesByName { get; } = new ConcurrentDictionary<string, AssemblyStoreAssembly>(StringComparer.OrdinalIgnoreCase);
         public IDictionary<uint, AssemblyStoreAssembly> AssembliesByHash32 { get; } = new ConcurrentDictionary<uint, AssemblyStoreAssembly>();
@@ -28,9 +28,10 @@ namespace Xamarin.Android.AssemblyStore
         public bool IsCompleteSet => indexStore != null && manifest != null;
         public int NumberOfStores => numberOfStores;
 
+        // Constructor to initialize the AssemblyStoreExplorer object
         public AssemblyStoreExplorer(string storePath, Action<AssemblyStoreExplorerLogLevel, string>? customLogger = null, bool keepStoreInMemory = false)
         {
-            if (String.IsNullOrEmpty(storePath))
+            if (string.IsNullOrEmpty(storePath))
             {
                 throw new ArgumentException("must not be null or empty", nameof(storePath));
             }
@@ -44,18 +45,9 @@ namespace Xamarin.Android.AssemblyStore
             this.keepStoreInMemory = keepStoreInMemory;
             StorePath = storePath;
             string? extension = Path.GetExtension(storePath);
-            string? baseName = null;
+            string? baseName = string.IsNullOrEmpty(extension) ? GetBaseNameNoExtension(storePath) : GetBaseNameHaveExtension(storePath, extension);
 
-            if (String.IsNullOrEmpty(extension))
-            {
-                baseName = GetBaseNameNoExtension(storePath);
-            }
-            else
-            {
-                baseName = GetBaseNameHaveExtension(storePath, extension);
-            }
-
-            if (String.IsNullOrEmpty(baseName))
+            if (string.IsNullOrEmpty(baseName))
             {
                 throw new InvalidOperationException($"Unable to determine base name of a store set from path '{storePath}'");
             }
@@ -64,12 +56,7 @@ namespace Xamarin.Android.AssemblyStore
             if (!IsAndroidArchive(extension))
             {
                 Logger(AssemblyStoreExplorerLogLevel.Info, $"{storePath} is not an Android archive, reading from filesystem");
-                string? directoryName = Path.GetDirectoryName(storePath);
-                if (String.IsNullOrEmpty(directoryName))
-                {
-                    directoryName = ".";
-                }
-
+                string? directoryName = Path.GetDirectoryName(storePath) ?? ".";
                 ReadStoreSetFromFilesystem(baseName, directoryName).Wait();
             }
             else
@@ -81,6 +68,7 @@ namespace Xamarin.Android.AssemblyStore
             ProcessStores();
         }
 
+        // Constructor to initialize the AssemblyStoreExplorer object from a ZipArchive
         public AssemblyStoreExplorer(ZipArchive archive, string basePathInArchive, Action<AssemblyStoreExplorerLogLevel, string>? customLogger = null, bool keepStoreInMemory = false)
         {
             logger = customLogger;
@@ -88,11 +76,11 @@ namespace Xamarin.Android.AssemblyStore
             StorePath = "<in-memory-archive>";
             StoreSetName = StorePath;
             ReadStoreSetFromArchive(archive, basePathInArchive).Wait();
-
             ProcessStores();
         }
 
-        void Logger(AssemblyStoreExplorerLogLevel level, string message)
+        // Method to log messages
+        private void Logger(AssemblyStoreExplorerLogLevel level, string message)
         {
             if (level == AssemblyStoreExplorerLogLevel.Error)
             {
@@ -113,12 +101,14 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
-        void DefaultLogger(AssemblyStoreExplorerLogLevel level, string message)
+        // Default logger method
+        private void DefaultLogger(AssemblyStoreExplorerLogLevel level, string message)
         {
             Console.WriteLine($"{level}: {message}");
         }
 
-        void ProcessStores()
+        // Method to process stores
+        private void ProcessStores()
         {
             if (Stores.Count == 0 || indexStore == null)
             {
@@ -146,21 +136,21 @@ namespace Xamarin.Android.AssemblyStore
                 assembly.Hash64 = he.Hash;
                 if (assembly.RuntimeIndex != he.MappingIndex)
                 {
-                    Logger(AssemblyStoreExplorerLogLevel.Warning, $"assembly with hashes 0x{assembly.Hash32} and 0x{assembly.Hash64} has a different 32-bit runtime index ({assembly.RuntimeIndex})");
+                    Logger(AssemblyStoreExplorerLogLevel.Warning, $"Assembly with hashes 0x{assembly.Hash32} and 0x{assembly.Hash64} has a different 32-bit runtime index ({assembly.RuntimeIndex})");
                 }
 
                 if (manifest != null && manifest.EntriesByHash64.TryGetValue(assembly.Hash64, out AssemblyStoreManifestEntry? me) && me != null)
                 {
-                    if (String.IsNullOrEmpty(assembly.Name))
+                    if (string.IsNullOrEmpty(assembly.Name))
                     {
                         Logger(AssemblyStoreExplorerLogLevel.Warning, $"32-bit hash 0x{assembly.Hash32:x} did not match any assembly name in the manifest");
                         assembly.Name = me.Name;
-                        if (String.IsNullOrEmpty(assembly.Name))
+                        if (string.IsNullOrEmpty(assembly.Name))
                         {
                             Logger(AssemblyStoreExplorerLogLevel.Warning, $"64-bit hash 0x{assembly.Hash64:x} did not match any assembly name in the manifest");
                         }
                     }
-                    else if (String.Compare(assembly.Name, me.Name, StringComparison.Ordinal) != 0)
+                    else if (string.Compare(assembly.Name, me.Name, StringComparison.Ordinal) != 0)
                     {
                         Logger(AssemblyStoreExplorerLogLevel.Warning, $"32-bit hash 0x{assembly.Hash32:x} maps to assembly name '{assembly.Name}', however 64-bit hash 0x{assembly.Hash64:x} for the same assembly maps to a different name '{me.Name}'");
                     }
@@ -197,7 +187,7 @@ namespace Xamarin.Android.AssemblyStore
                 {
                     if (!Stores.TryGetValue(he.StoreID, out List<AssemblyStoreReader>? storeList) || storeList == null)
                     {
-                        Logger(AssemblyStoreExplorerLogLevel.Warning, $"store with id {he.StoreID} not part of the set");
+                        Logger(AssemblyStoreExplorerLogLevel.Warning, $"Store with id {he.StoreID} is not part of the set");
                         continue;
                     }
 
@@ -221,26 +211,16 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
-        async Task ReadStoreSetFromArchive(string baseName, string archivePath, string extension)
+        // Method to read store set from an archive
+        private async Task ReadStoreSetFromArchive(string baseName, string archivePath, string extension)
         {
-            string basePathInArchive;
-
-            if (String.Compare(".aab", extension, StringComparison.OrdinalIgnoreCase) == 0)
+            string basePathInArchive = extension.ToLower() switch
             {
-                basePathInArchive = "base/root/assemblies";
-            }
-            else if (String.Compare(".apk", extension, StringComparison.OrdinalIgnoreCase) == 0)
-            {
-                basePathInArchive = "assemblies";
-            }
-            else if (String.Compare(".zip", extension, StringComparison.OrdinalIgnoreCase) == 0)
-            {
-                basePathInArchive = "root/assemblies";
-            }
-            else
-            {
-                throw new InvalidOperationException($"Unrecognized archive extension '{extension}'");
-            }
+                ".aab" => "base/root/assemblies",
+                ".apk" => "assemblies",
+                ".zip" => "root/assemblies",
+                _ => throw new InvalidOperationException($"Unrecognized archive extension '{extension}'")
+            };
 
             basePathInArchive = $"{basePathInArchive}/{baseName}.";
             using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Read))
@@ -249,7 +229,8 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
-        async Task ReadStoreSetFromArchive(ZipArchive archive, string basePathInArchive)
+        // Method to read store set from a ZipArchive
+        private async Task ReadStoreSetFromArchive(ZipArchive archive, string basePathInArchive)
         {
             foreach (var entry in archive.Entries)
             {
@@ -261,7 +242,6 @@ namespace Xamarin.Android.AssemblyStore
                 using var stream = new MemoryStream();
                 using var entryStream = entry.Open();
                 await entryStream.CopyToAsync(stream);
-                entryStream.Close();
                 stream.Seek(0, SeekOrigin.Begin);
 
                 if (entry.FullName.EndsWith(".blob", StringComparison.Ordinal))
@@ -275,15 +255,15 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
-        void AddStore(AssemblyStoreReader reader)
+        // Method to add a store
+        private void AddStore(AssemblyStoreReader reader)
         {
             if (reader.HasGlobalIndex)
             {
                 indexStore = reader;
             }
 
-            List<AssemblyStoreReader>? storeList;
-            if (!Stores.TryGetValue(reader.StoreID, out storeList))
+            if (!Stores.TryGetValue(reader.StoreID, out List<AssemblyStoreReader>? storeList))
             {
                 storeList = new List<AssemblyStoreReader>();
                 Stores.Add(reader.StoreID, storeList);
@@ -293,13 +273,14 @@ namespace Xamarin.Android.AssemblyStore
             Assemblies.AddRange(reader.Assemblies);
         }
 
-        string? GetStoreArch(string path)
+        // Method to get the architecture of a store
+        private string? GetStoreArch(string path)
         {
             string? arch = Path.GetFileNameWithoutExtension(path);
-            if (!String.IsNullOrEmpty(arch))
+            if (!string.IsNullOrEmpty(arch))
             {
                 arch = Path.GetExtension(arch);
-                if (!String.IsNullOrEmpty(arch))
+                if (!string.IsNullOrEmpty(arch))
                 {
                     arch = arch.Substring(1);
                 }
@@ -308,21 +289,22 @@ namespace Xamarin.Android.AssemblyStore
             return arch;
         }
 
-        async Task ReadStoreSetFromFilesystem(string baseName, string setPath)
+        // Method to read store set from the filesystem
+        private async Task ReadStoreSetFromFilesystem(string baseName, string setPath)
         {
             foreach (string de in Directory.EnumerateFiles(setPath, $"{baseName}.*", SearchOption.TopDirectoryOnly))
             {
                 string? extension = Path.GetExtension(de);
-                if (String.IsNullOrEmpty(extension))
+                if (string.IsNullOrEmpty(extension))
                 {
                     continue;
                 }
 
-                if (String.Compare(".blob", extension, StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Compare(".blob", extension, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     AddStore(await ReadStore(de));
                 }
-                else if (String.Compare(".manifest", extension, StringComparison.OrdinalIgnoreCase) == 0)
+                else if (string.Compare(".manifest", extension, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     manifest = await ReadManifest(de);
                 }
@@ -346,21 +328,24 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
-        AssemblyStoreReader CreateStoreReader(Stream input, string? arch)
+        // Method to create a store reader
+        private AssemblyStoreReader CreateStoreReader(Stream input, string? arch)
         {
             numberOfStores++;
             return new AssemblyStoreReader(input, arch, keepStoreInMemory);
         }
 
-        bool IsAndroidArchive(string extension)
+        // Method to check if the extension is an Android archive
+        private bool IsAndroidArchive(string extension)
         {
             return
-                String.Compare(".aab", extension, StringComparison.OrdinalIgnoreCase) == 0 ||
-                String.Compare(".apk", extension, StringComparison.OrdinalIgnoreCase) == 0 ||
-                String.Compare(".zip", extension, StringComparison.OrdinalIgnoreCase) == 0;
+                string.Compare(".aab", extension, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(".apk", extension, StringComparison.OrdinalIgnoreCase) == 0 ||
+                string.Compare(".zip", extension, StringComparison.OrdinalIgnoreCase) == 0;
         }
 
-        string GetBaseNameHaveExtension(string storePath, string extension)
+        // Method to get the base name when the extension is present
+        private string GetBaseNameHaveExtension(string storePath, string extension)
         {
             if (IsAndroidArchive(extension))
             {
@@ -377,7 +362,8 @@ namespace Xamarin.Android.AssemblyStore
             return fileName;
         }
 
-        string GetBaseNameNoExtension(string storePath)
+        // Method to get the base name when the extension is not present
+        private string GetBaseNameNoExtension(string storePath)
         {
             string fileName = Path.GetFileName(storePath);
             if (fileName.EndsWith("_assemblies", StringComparison.OrdinalIgnoreCase))

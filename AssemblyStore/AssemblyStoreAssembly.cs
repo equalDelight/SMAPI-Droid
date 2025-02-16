@@ -7,6 +7,7 @@ namespace Xamarin.Android.AssemblyStore
 {
     public class AssemblyStoreAssembly
     {
+        // Properties to store various data offsets and sizes
         public uint DataOffset { get; }
         public uint DataSize { get; }
         public uint DebugDataOffset { get; }
@@ -19,10 +20,12 @@ namespace Xamarin.Android.AssemblyStore
         public uint RuntimeIndex { get; set; }
         public AssemblyStoreReader Store { get; }
 
+        // Properties to generate file names for DLL, PDB, and config files
         public string DllName => MakeFileName("dll");
         public string PdbName => MakeFileName("pdb");
         public string ConfigName => MakeFileName("dll.config");
 
+        // Constructor to initialize the AssemblyStoreAssembly object from a BinaryReader and AssemblyStoreReader
         internal AssemblyStoreAssembly(BinaryReader reader, AssemblyStoreReader store)
         {
             Store = store;
@@ -34,6 +37,7 @@ namespace Xamarin.Android.AssemblyStore
             ConfigDataSize = reader.ReadUInt32();
         }
 
+        // Method to extract the assembly to a specified directory with optional decompression
         public void Extract(string outputDirPath, string extension, string? fileName = null, bool decompress = false)
         {
             var outputFilePath = MakeOutputFilePath(outputDirPath, extension, fileName);
@@ -44,6 +48,7 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
+        // Method to extract the assembly to a specified stream
         public void Extract(Stream output, string extension)
         {
             switch (extension)
@@ -60,6 +65,7 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
+        // Method to decompress a DLL file if it is compressed
         private static void DecompressDll(string path)
         {
             var compressedData = File.ReadAllBytes(path);
@@ -73,11 +79,13 @@ namespace Xamarin.Android.AssemblyStore
             File.WriteAllBytes(path, decompressedData);
         }
 
+        // Method to generate the output file path
         private string MakeOutputFilePath(string outputDirPath, string extension, string? fileName)
         {
             return Path.Combine(outputDirPath, MakeFileName(extension, fileName));
         }
 
+        // Method to generate the file name based on the extension and optional file name
         private string MakeFileName(string extension, string? fileName = null)
         {
             fileName ??= Name;
