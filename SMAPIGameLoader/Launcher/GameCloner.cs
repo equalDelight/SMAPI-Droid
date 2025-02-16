@@ -42,7 +42,7 @@ internal static class GameCloner
         }
 
         // Check if the game needs to be cloned again
-        public bool IsNeedToCloneGame()
+        public bool needsToClone()
         {
             // Check if the launcher build code has changed
             Console.WriteLine("Last build code: " + LastLauncherBuildCode);
@@ -80,9 +80,9 @@ internal static class GameCloner
         ClonerState clonerState = GetClonerState();
         TaskTool.NewLine("Asserting game clone");
 
-        bool isNeedCloneGame = clonerState.IsNeedToCloneGame();
+        bool isCloneGameNeeded = clonerState.needsToClone();
 
-        if (isNeedCloneGame)
+        if (isCloneGameNeeded)
         {
             TaskTool.NewLine("Starting game asset cloning");
             // Verify game assets
@@ -100,7 +100,7 @@ internal static class GameCloner
         GameAssemblyManager.LoadAssembly(GameAssemblyManager.MonoGameDLLFileName);
 
         // Rewrite StardewValley.dll if needed
-        if (isNeedCloneGame)
+        if (isCloneGameNeeded)
         {
             TaskTool.NewLine("Rewriting StardewValley.dll");
             using (var stardewAssemblyStream = File.Open(GameAssemblyManager.StardewValleyFilePath, FileMode.Open, FileAccess.ReadWrite))
@@ -119,7 +119,7 @@ internal static class GameCloner
         }
 
         // Finalize the setup
-        if (isNeedCloneGame)
+        if (isCloneGameNeeded)
         {
             // Mark the cloning process as done and save the state
             clonerState.MarkCloneGameDone();
