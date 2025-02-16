@@ -18,18 +18,21 @@ namespace Xamarin.Android.AssemblyStore
         public uint LocalEntryCount { get; private set; }
         public uint GlobalEntryCount { get; private set; }
         public uint StoreID { get; private set; }
-        public List<AssemblyStoreAssembly> Assemblies { get; }
+        public List<AssemblyStoreAssembly> Assemblies { get; } = new List<AssemblyStoreAssembly>();
         public List<AssemblyStoreHashEntry> GlobalIndex32 { get; } = new List<AssemblyStoreHashEntry>();
         public List<AssemblyStoreHashEntry> GlobalIndex64 { get; } = new List<AssemblyStoreHashEntry>();
         public string Arch { get; }
 
         public bool HasGlobalIndex => StoreID == 0;
 
+        // Constructor to initialize the AssemblyStoreReader object
         public AssemblyStoreReader(Stream store, string? arch = null, bool keepStoreInMemory = false)
         {
-            Arch = arch ?? String.Empty;
+            Arch = arch ?? string.Empty;
 
+            // Ensure the stream is at the beginning
             store.Seek(0, SeekOrigin.Begin);
+
             if (keepStoreInMemory)
             {
                 storeData = new MemoryStream();
@@ -42,7 +45,6 @@ namespace Xamarin.Android.AssemblyStore
             {
                 ReadHeader(reader);
 
-                Assemblies = new List<AssemblyStoreAssembly>();
                 ReadLocalEntries(reader, Assemblies);
                 if (HasGlobalIndex)
                 {
@@ -51,16 +53,19 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
+        // Method to extract the assembly image to a file
         internal void ExtractAssemblyImage(AssemblyStoreAssembly assembly, string outputFilePath)
         {
             SaveDataToFile(outputFilePath, assembly.DataOffset, assembly.DataSize);
         }
 
+        // Method to extract the assembly image to a stream
         internal void ExtractAssemblyImage(AssemblyStoreAssembly assembly, Stream output)
         {
             SaveDataToStream(output, assembly.DataOffset, assembly.DataSize);
         }
 
+        // Method to extract the assembly debug data to a file
         internal void ExtractAssemblyDebugData(AssemblyStoreAssembly assembly, string outputFilePath)
         {
             if (assembly.DebugDataOffset == 0 || assembly.DebugDataSize == 0)
@@ -70,6 +75,7 @@ namespace Xamarin.Android.AssemblyStore
             SaveDataToFile(outputFilePath, assembly.DebugDataOffset, assembly.DebugDataSize);
         }
 
+        // Method to extract the assembly debug data to a stream
         internal void ExtractAssemblyDebugData(AssemblyStoreAssembly assembly, Stream output)
         {
             if (assembly.DebugDataOffset == 0 || assembly.DebugDataSize == 0)
@@ -79,16 +85,17 @@ namespace Xamarin.Android.AssemblyStore
             SaveDataToStream(output, assembly.DebugDataOffset, assembly.DebugDataSize);
         }
 
+        // Method to extract the assembly config data to a file
         internal void ExtractAssemblyConfig(AssemblyStoreAssembly assembly, string outputFilePath)
         {
             if (assembly.ConfigDataOffset == 0 || assembly.ConfigDataSize == 0)
             {
                 return;
             }
-
             SaveDataToFile(outputFilePath, assembly.ConfigDataOffset, assembly.ConfigDataSize);
         }
 
+        // Method to extract the assembly config data to a stream
         internal void ExtractAssemblyConfig(AssemblyStoreAssembly assembly, Stream output)
         {
             if (assembly.ConfigDataOffset == 0 || assembly.ConfigDataSize == 0)
@@ -98,6 +105,7 @@ namespace Xamarin.Android.AssemblyStore
             SaveDataToStream(output, assembly.ConfigDataOffset, assembly.ConfigDataSize);
         }
 
+        // Method to save data to a file
         void SaveDataToFile(string outputFilePath, uint offset, uint size)
         {
             EnsureStoreDataAvailable();
@@ -107,6 +115,7 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
+        // Method to save data to a stream
         void SaveDataToStream(Stream output, uint offset, uint size)
         {
             EnsureStoreDataAvailable();
@@ -130,6 +139,7 @@ namespace Xamarin.Android.AssemblyStore
             pool.Return(buf);
         }
 
+        // Method to ensure store data is available
         void EnsureStoreDataAvailable()
         {
             if (storeData != null)
@@ -140,6 +150,7 @@ namespace Xamarin.Android.AssemblyStore
             throw new InvalidOperationException("Store data not available. AssemblyStore/AssemblyStoreExplorer must be instantiated with the `keepStoreInMemory` argument set to `true`");
         }
 
+        // Method to check if the content of another AssemblyStoreReader is identical
         public bool HasIdenticalContent(AssemblyStoreReader other)
         {
             return
@@ -152,6 +163,7 @@ namespace Xamarin.Android.AssemblyStore
                 other.GlobalIndex64.Count == GlobalIndex64.Count;
         }
 
+        // Method to read the header from the binary reader
         void ReadHeader(BinaryReader reader)
         {
             uint magic = reader.ReadUInt32();
@@ -176,6 +188,7 @@ namespace Xamarin.Android.AssemblyStore
             StoreID = reader.ReadUInt32();
         }
 
+        // Method to read local entries from the binary reader
         void ReadLocalEntries(BinaryReader reader, List<AssemblyStoreAssembly> assemblies)
         {
             for (uint i = 0; i < LocalEntryCount; i++)
@@ -184,6 +197,7 @@ namespace Xamarin.Android.AssemblyStore
             }
         }
 
+        // Method to read the global index from the binary reader
         void ReadGlobalIndex(BinaryReader reader, List<AssemblyStoreHashEntry> index32, List<AssemblyStoreHashEntry> index64)
         {
             ReadIndex(true, index32);
