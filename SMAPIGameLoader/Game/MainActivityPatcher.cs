@@ -1,30 +1,26 @@
 ﻿using HarmonyLib;
 using StardewValley;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SMAPIGameLoader;
 
 internal class MainActivityPatcher
 {
+    // Prefix method to bypass CheckStorageMigration
     public static bool PrefixCheckStorageMigration(ref bool __result)
     {
-        Console.WriteLine("bypass CheckStorageMigration");
+        Console.WriteLine("Bypassing CheckStorageMigration");
         __result = false;
         return false;
     }
 
+    // Apply the Harmony patch
     internal static void Apply()
     {
         var harmony = new Harmony("SMAPIGameLoader");
-        var PrefixCheckStorageMigration = AccessTools.Method(
-            typeof(MainActivityPatcher), nameof(MainActivityPatcher.PrefixCheckStorageMigration));
-        var CheckStorageMigration = AccessTools.Method(
-            typeof(MainActivity), nameof(MainActivity.CheckStorageMigration));
-        harmony.Patch(CheckStorageMigration, prefix: PrefixCheckStorageMigration);
-        Console.WriteLine("Done MainActivityPatcher.Apply()");
+        var prefixMethod = AccessTools.Method(typeof(MainActivityPatcher), nameof(PrefixCheckStorageMigration));
+        var targetMethod = AccessTools.Method(typeof(MainActivity), nameof(MainActivity.CheckStorageMigration));
+        harmony.Patch(targetMethod, prefix: new HarmonyMethod(prefixMethod));
+        Console.WriteLine("MainActivityPatcher.Apply() completed");
     }
 }

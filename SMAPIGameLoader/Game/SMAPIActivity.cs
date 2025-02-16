@@ -34,41 +34,42 @@ public class SMAPIActivity : AndroidGameActivity
     public static SMAPIActivity Instance { get; private set; }
 
     Bundle currentBundle;
+
     protected override void OnCreate(Bundle bundle)
     {
-        base.OnCreate(currentBundle);
+        base.OnCreate(bundle);
         Console.WriteLine("SMAPIActivity.OnCreate()");
 
-        //init sdk
+        // Initialize SDK
         Instance = this;
         currentBundle = bundle;
         ActivityTool.Init(this);
 
-        //ready
+        // Launch the game
         LaunchGame();
     }
+
     void LaunchGame()
     {
-        Console.WriteLine("try launch game");
+        Console.WriteLine("Trying to launch game");
         try
         {
-            //ready to use all assemblies & references
+            // Apply Harmony patches
             var harmony = new Harmony("SMAPIGameLoader");
             harmony.PatchAll();
-            Console.WriteLine("harmony.PatchAll()");
+            Console.WriteLine("Harmony patches applied");
 
-            //Prepare Assemblies && fix bug
+            // Load and prepare assemblies
             GameAssemblyManager.LoadAssembly(GameAssemblyManager.StardewDllName);
 
-            //setup Activity
-            Console.WriteLine("try integrate main activity");
+            // Integrate MainActivity
+            Console.WriteLine("Integrating MainActivity");
             IntegrateStardewMainActivity();
 
-            //ready
-            Console.WriteLine("Stardew Activity Ready");
-            //fix load lib
+            // Load native libraries
             NativeLibManager.Loads();
 
+            // Call Stardew OnCreate method
             Stardew_OnCreate();
         }
         catch (Exception ex)
@@ -76,17 +77,17 @@ public class SMAPIActivity : AndroidGameActivity
             ErrorDialogTool.Show(ex);
         }
     }
+
     void IntegrateStardewMainActivity()
     {
-        Console.WriteLine("try get instance field");
-        var instance_Field = typeof(MainActivity).GetField("instance", BindingFlags.Static | BindingFlags.Public);
-        Console.WriteLine("try set field");
-        instance_Field.SetValue(null, this);
-        Console.WriteLine("done setup MainActivity.instance with: " + instance_Field.GetValue(null));
+        Console.WriteLine("Getting instance field");
+        var instanceField = typeof(MainActivity).GetField("instance", BindingFlags.Static | BindingFlags.Public);
+        Console.WriteLine("Setting instance field");
+        instanceField.SetValue(null, this);
+        Console.WriteLine("MainActivity.instance set to: " + instanceField.GetValue(null));
         MainActivityPatcher.Apply();
     }
 
-    //override method
     void Stardew_OnCreate()
     {
         Log.It("MainActivity.OnCreate");
@@ -100,7 +101,6 @@ public class SMAPIActivity : AndroidGameActivity
         CheckAppPermissions();
     }
 
-    //Start Instance Game
     void OnCreatePartTwo()
     {
         Log.It("MainActivity.OnCreatePartTwo");
@@ -110,31 +110,32 @@ public class SMAPIActivity : AndroidGameActivity
         var err = StartGameWithSMAPI();
         if (err != null)
         {
-            ToastNotifyTool.Notify("error try run SMAPI: " + err.ToString());
+            ToastNotifyTool.Notify("Error trying to run SMAPI: " + err);
             ErrorDialogTool.Show(err);
         }
     }
 
     Game1 _game1 => Game1.game1;
+
     protected override void OnResume()
     {
         Log.It("MainActivity.OnResume");
         base.OnResume();
-        if (_game1 != null)
-            _game1.OnAppResume();
+        _game1?.OnAppResume();
 
         RequestedOrientation = ScreenOrientation.SensorLandscape;
         SetImmersive();
     }
+
     protected override void OnPause()
     {
         Log.It("MainActivity.OnPause");
-        if (_game1 != null)
-            _game1.OnAppPause();
+        _game1?.OnAppPause();
 
         Game1.emergencyBackup();
         base.OnPause();
     }
+
     public override void OnWindowFocusChanged(bool hasFocus)
     {
         base.OnWindowFocusChanged(hasFocus);
@@ -152,32 +153,30 @@ public class SMAPIActivity : AndroidGameActivity
             Window.DecorView.SystemUiVisibility = (StatusBarVisibility)5894;
         }
     }
+
     public bool CheckStorageMigration()
     {
-        Console.WriteLine("Bypass Farm Migration");
+        Console.WriteLine("Bypassing storage migration");
         return false;
     }
 
     public void LogPermissions()
     {
-        Log.It("MainActivity.LogPermissions method PackageManager: , AccessNetworkState:" + PackageManager.CheckPermission("android.permission.ACCESS_NETWORK_STATE", PackageName).ToString() + ", AccessWifiState:" + PackageManager.CheckPermission("android.permission.ACCESS_WIFI_STATE", PackageName).ToString() + ", Internet:" + PackageManager.CheckPermission("android.permission.INTERNET", PackageName).ToString() + ", Vibrate:" + PackageManager.CheckPermission("android.permission.VIBRATE", PackageName));
+        Log.It("MainActivity.LogPermissions method PackageManager: , AccessNetworkState:" + PackageManager.CheckPermission("android.permission.ACCESS_NETWORK_STATE", PackageName) + ", AccessWifiState:" + PackageManager.CheckPermission("android.permission.ACCESS_WIFI_STATE", PackageName) + ", Internet:" + PackageManager.CheckPermission("android.permission.INTERNET", PackageName) + ", Vibrate:" + PackageManager.CheckPermission("android.permission.VIBRATE", PackageName));
         if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
         {
-            Log.It("MainActivity.LogPermissions: , AccessNetworkState:" + CheckSelfPermission("android.permission.ACCESS_NETWORK_STATE").ToString() + ", AccessWifiState:" + CheckSelfPermission("android.permission.ACCESS_WIFI_STATE").ToString() + ", Internet:" + CheckSelfPermission("android.permission.INTERNET").ToString() + ", Vibrate:" + CheckSelfPermission("android.permission.VIBRATE"));
+            Log.It("MainActivity.LogPermissions: , AccessNetworkState:" + CheckSelfPermission("android.permission.ACCESS_NETWORK_STATE") + ", AccessWifiState:" + CheckSelfPermission("android.permission.ACCESS_WIFI_STATE") + ", Internet:" + CheckSelfPermission("android.permission.INTERNET") + ", Vibrate:" + CheckSelfPermission("android.permission.VIBRATE"));
         }
     }
+
     public bool HasPermissions
     {
         get
         {
-            if (PackageManager.CheckPermission("android.permission.ACCESS_NETWORK_STATE", PackageName) == Permission.Granted
+            return PackageManager.CheckPermission("android.permission.ACCESS_NETWORK_STATE", PackageName) == Permission.Granted
                 && PackageManager.CheckPermission("android.permission.ACCESS_WIFI_STATE", PackageName) == Permission.Granted
                 && PackageManager.CheckPermission("android.permission.INTERNET", PackageName) == Permission.Granted
-                && PackageManager.CheckPermission("android.permission.VIBRATE", PackageName) == Permission.Granted)
-            {
-                return true;
-            }
-            return false;
+                && PackageManager.CheckPermission("android.permission.VIBRATE", PackageName) == Permission.Granted;
         }
     }
 
@@ -186,15 +185,16 @@ public class SMAPIActivity : AndroidGameActivity
         LogPermissions();
         if (HasPermissions)
         {
-            Log.It("MainActivity.CheckAppPermissions permissions already granted.");
+            Log.It("MainActivity.CheckAppPermissions: Permissions already granted.");
             OnCreatePartTwo();
         }
         else
         {
-            Log.It("MainActivity.CheckAppPermissions PromptForPermissions C");
+            Log.It("MainActivity.CheckAppPermissions: Prompting for permissions.");
             PromptForPermissionsWithReasonFirst();
         }
     }
+
     public static string PermissionMessageA(string languageCode)
     {
         return languageCode switch
@@ -210,9 +210,11 @@ public class SMAPIActivity : AndroidGameActivity
             "hu" => "A játék mentéséhez, és ahhoz, hogy a különböző platformok között hordozhasd a játékmentést, engedélyezned kell a külső tárhely olvasását/írását, Kérjük, a játékhoz engedélyezd ezeket.",
             "it" => "È necessaria l'autorizzazione a leggere/scrivere su un dispositivo di memorizzazione esterno per salvare la partita e per consentire di trasferire i salvataggi da e su altre piattaforme. Concedi l'autorizzazione per giocare.",
             "zh" => "《星露谷物语》请求获得授权用来保存游戏数据以及访问线上功能。",
-            _ => "Read/write to external storage permission is required to save the game, and to allow to you transfer saves to and from other platforms. Please give permission in order to play.",
+            "id" => "Izin baca/tulis ke penyimpanan eksternal diperlukan untuk menyimpan permainan, dan untuk memungkinkan Anda mentransfer penyimpanan ke dan dari platform lain. Harap berikan izin untuk bermain.",
+            _ => "Read/write to external storage permission is required to save the game, and to allow you to transfer saves to and from other platforms. Please give permission in order to play.",
         };
     }
+
     public static string PermissionMessageB(string languageCode)
     {
         return languageCode switch
@@ -228,10 +230,11 @@ public class SMAPIActivity : AndroidGameActivity
             "hu" => "Lépje be a telefonodon a Beállítások > Alkalmazások > Stardew Valley > Engedélyek menübe, majd engedélyezd a Tárhelyet a játékhoz.",
             "it" => "Nel telefono, vai su Impostazioni > Applicazioni > Stardew Valley > Autorizzazioni e attiva Memoria archiviazione per giocare.",
             "zh" => "可在“设置-权限隐私-按应用管理权限-星露谷物语”进行设置，并打开“电话”、“读取位置信息”、“存储”权限。",
+            "id" => "Silakan masuk ke Pengaturan telepon > Aplikasi > Stardew Valley > Izin, dan aktifkan Penyimpanan untuk memainkan game.",
             _ => "Please go into phone Settings > Apps > Stardew Valley > Permissions, and enable Storage to play the game.",
         };
-
     }
+
     public static string GetOKString(string languageCode)
     {
         return languageCode switch
@@ -247,6 +250,7 @@ public class SMAPIActivity : AndroidGameActivity
             "hu" => "rendben",
             "it" => "ok",
             "zh" => "好",
+            "id" => "OK",
             _ => "OK",
         };
     }
@@ -262,7 +266,7 @@ public class SMAPIActivity : AndroidGameActivity
             builder.SetCancelable(false);
             builder.SetPositiveButton(GetOKString(languageCode), delegate
             {
-                Log.It("MainActivity.PromptForPermissionsWithReasonFirst PromptForPermissions A");
+                Log.It("MainActivity.PromptForPermissionsWithReasonFirst: Prompting for permissions");
                 PromptForPermissions();
             });
             Dialog dialog = builder.Create();
@@ -273,59 +277,63 @@ public class SMAPIActivity : AndroidGameActivity
         }
         else
         {
-            Log.It("MainActivity.PromptForPermissionsWithReasonFirst PromptForPermissions B");
+            Log.It("MainActivity.PromptForPermissionsWithReasonFirst: Permissions already granted");
             PromptForPermissions();
         }
     }
-    private string[] requiredPermissions => [
+
+    private string[] RequiredPermissions => new[]
+    {
         "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_WIFI_STATE",
         "android.permission.INTERNET", "android.permission.VIBRATE"
-    ];
-    private string[] deniedPermissionsArray
+    };
+
+    private string[] DeniedPermissionsArray
     {
         get
         {
             List<string> list = new List<string>();
-            string[] array = requiredPermissions;
-            for (int i = 0; i < array.Length; i++)
+            foreach (var permission in RequiredPermissions)
             {
-                if (PackageManager.CheckPermission(array[i], PackageName) != 0)
+                if (PackageManager.CheckPermission(permission, PackageName) != Permission.Granted)
                 {
-                    list.Add(array[i]);
+                    list.Add(permission);
                 }
             }
             return list.ToArray();
         }
     }
+
     public void PromptForPermissions()
     {
-        Log.It("MainActivity.PromptForPermissions requesting permissions...deniedPermissionsArray:" + deniedPermissionsArray.Length);
-        string[] array = deniedPermissionsArray;
+        Log.It("MainActivity.PromptForPermissions: Requesting permissions... DeniedPermissionsArray: " + DeniedPermissionsArray.Length);
+        var array = DeniedPermissionsArray;
         if (array.Length != 0)
         {
-            Log.It("PromptForPermissions permissionsArray:" + array.Length);
+            Log.It("PromptForPermissions: PermissionsArray: " + array.Length);
             for (int i = 0; i < array.Length; i++)
             {
-                Log.It("PromptForPermissions permissionsArray[" + i + "]: " + array[i]);
+                Log.It("PromptForPermissions: PermissionsArray[" + i + "]: " + array[i]);
             }
             RequestPermissions(array, 0);
         }
     }
 
     static string GetSMAPIFilePath => Path.Combine(GameAssemblyManager.AssembliesDirPath, "StardewModdingAPI.dll");
+
     public Exception StartGameWithSMAPI()
     {
         Exception exOut = null;
         try
         {
-            //setup patch game vanilla
+            // Setup patch for game vanilla
             Log.Setup();
 
             var smapiFilePath = GetSMAPIFilePath;
-            if (File.Exists(smapiFilePath) == false)
+            if (!File.Exists(smapiFilePath))
             {
-                Console.WriteLine("error StardewModdingAPI.dll file not found");
-                exOut = new Exception($"Error file: {smapiFilePath} not found");
+                Console.WriteLine("Error: StardewModdingAPI.dll file not found");
+                exOut = new Exception($"Error: File {smapiFilePath} not found");
             }
 
             var smapi = Assembly.LoadFrom(smapiFilePath);
@@ -336,28 +344,29 @@ public class SMAPIActivity : AndroidGameActivity
         }
         catch (Exception err)
         {
-            Console.WriteLine("failed start SMAPI");
+            Console.WriteLine("Failed to start SMAPI");
             Console.WriteLine(err);
             exOut = err;
         }
         return exOut;
     }
+
     public void StartGameVanilla()
     {
-        Console.WriteLine("try start game with vanilla");
+        Console.WriteLine("Trying to start game with vanilla");
         try
         {
-            //setup game patch
+            // Setup game patch
             Log.Setup();
 
-            //ready create instance game
+            // Create instance of game
             var gameRunner = new GameRunner();
             GameRunner.instance = gameRunner;
             SetContentView((View)GameRunner.instance.Services.GetService(typeof(View)));
-            Console.WriteLine("done set content view");
-            Console.WriteLine("try run Game Runner: " + GameRunner.instance);
+            Console.WriteLine("Set content view completed");
+            Console.WriteLine("Running Game Runner: " + GameRunner.instance);
             GameRunner.instance.Run();
-            Console.WriteLine("done GameRunner.Run()");
+            Console.WriteLine("GameRunner.Run() completed");
         }
         catch (Exception ex)
         {
@@ -372,19 +381,20 @@ public class SMAPIActivity : AndroidGameActivity
         PackageInfo packageInfo = packageManager.GetPackageInfo(context.PackageName, (PackageInfoFlags)0);
         return packageInfo.VersionCode;
     }
+
     public void SetPaddingForMenus()
     {
-        Log.It("MainActivity.SetPaddingForMenus build:" + GetBuild());
+        Log.It("MainActivity.SetPaddingForMenus build: " + GetBuild());
         if (Build.VERSION.SdkInt >= BuildVersionCodes.P && Window != null && Window.DecorView != null && Window.DecorView.RootWindowInsets != null && Window.DecorView.RootWindowInsets.DisplayCutout != null)
         {
             DisplayCutout displayCutout = Window.DecorView.RootWindowInsets.DisplayCutout;
-            Log.It("MainActivity.SetPaddingForMenus DisplayCutout:" + displayCutout);
+            Log.It("MainActivity.SetPaddingForMenus DisplayCutout: " + displayCutout);
             if (displayCutout.SafeInsetLeft > 0 || displayCutout.SafeInsetRight > 0)
             {
                 int num = Math.Max(displayCutout.SafeInsetLeft, displayCutout.SafeInsetRight);
                 Game1.xEdge = Math.Min(90, num);
                 Game1.toolbarPaddingX = num;
-                Log.It("MainActivity.SetPaddingForMenus CUT OUT toolbarPaddingX:" + Game1.toolbarPaddingX + ", xEdge:" + Game1.xEdge);
+                Log.It("MainActivity.SetPaddingForMenus CUT OUT toolbarPaddingX: " + Game1.toolbarPaddingX + ", xEdge: " + Game1.xEdge);
                 return;
             }
         }
@@ -398,6 +408,7 @@ public class SMAPIActivity : AndroidGameActivity
             Game1.toolbarPaddingX = 20;
         }
     }
+
     public static void SetupDisplaySettings()
     {
         var MobileDisplayType = typeof(MainActivity).Assembly.GetType("StardewValley.Mobile.MobileDisplay");

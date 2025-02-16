@@ -3,11 +3,12 @@ using LibPatcher;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+
 internal class Program
 {
     static void Main(string[] args)
     {
-        //ready
+        // Ready to start patching process
         try
         {
             PatchLibX64.Start();
@@ -15,16 +16,17 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            Console.WriteLine("An error occurred: " + ex.Message);
         }
 
-        //close
+        // Close the application
         Exit();
     }
+
     static void Exit()
     {
-        Console.WriteLine("Press Any Key To Exit..");
-        Console.Read();
+        Console.WriteLine("Press any key to exit...");
+        Console.ReadKey();
         Environment.Exit(0);
     }
 }

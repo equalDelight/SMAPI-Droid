@@ -3,64 +3,69 @@ using System.Text;
 
 internal class Program
 {
+    private static readonly StringBuilder sbLog = new();
+
     private static void Main(string[] args)
     {
+        const int refreshTime = 100;
+
         while (true)
         {
-            const int refreshTime = 100;
             Thread.Sleep(refreshTime);
 
-
-            //Update
+            // Update current time
             DateTime now = DateTime.Now;
+            Log($"Current Time: {now:HH:mm:ss:fff}");
 
-            int hours = now.Hour;
-            int minutes = now.Minute;
-            int seconds = now.Second;
-            int millisec = now.Millisecond;
-
-            Log($"Current Time: {hours:D2}:{minutes:D2}:{seconds:D2}:{millisec:D2}");
-
-            Process process = new Process();
-            process.StartInfo.FileName = "adb";
-            process.StartInfo.Arguments = "shell cat /proc/meminfo";
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
+            // Execute adb command to get memory info
+            Process process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "adb",
+                    Arguments = "shell cat /proc/meminfo",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
 
             process.Start();
             string output = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
 
+            // Process memory info output
             string[] lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            var MemTotal = lines[0];
-            var MemFree = lines[1];
-            var MemAvailable = lines[2];
-            PrintLineDataFromMemInfo(MemTotal);
-            PrintLineDataFromMemInfo(MemFree);
-            PrintLineDataFromMemInfo(MemAvailable);
+            if (lines.Length >= 3)
+            {
+                PrintLineDataFromMemInfo(lines[0]); // MemTotal
+                PrintLineDataFromMemInfo(lines[1]); // MemFree
+                PrintLineDataFromMemInfo(lines[2]); // MemAvailable
+            }
 
-
-            //Render
+            // Render log to console
             RenderLog();
         }
     }
 
+    // Log message to StringBuilder
     static void Log(string msg) => sbLog.AppendLine(msg);
+
+    // Render log to console and clear StringBuilder
     private static void RenderLog()
     {
         Console.Clear();
         Console.WriteLine(sbLog.ToString());
-
         sbLog.Clear();
     }
 
-    static StringBuilder sbLog = new();
+    // Parse and print memory info line data
     static void PrintLineDataFromMemInfo(string lineData)
     {
-        var data = lineData.Split(":", StringSplitOptions.TrimEntries);
-        int kb = int.Parse(data[1].Replace("kB", "").Trim());
-        var varName = data[0];
-        sbLog.AppendLine($"{varName}: {kb / (1024f):F3} MB");
+        var data = lineData.Split(':', StringSplitOptions.TrimEntries);
+        if (data.Length == 2 && int.TryParse(data[1].Replace("kB", "").Trim(), out int kb))
+        {
+            sbLog.AppendLine($"{data[0]}: {kb / 1024f:F3} MB");
+        }
     }
 }

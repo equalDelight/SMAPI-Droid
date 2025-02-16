@@ -18,48 +18,50 @@ internal class GameAssemblyManager
     public const string StardewDllName = "StardewValley.dll";
     public const string MonoGameDLLFileName = "MonoGame.Framework.dll";
     public static string StardewValleyFilePath => Path.Combine(AssembliesDirPath, StardewDllName);
+
     public static void VerifyAssemblies()
     {
-        Console.WriteLine("Verify Assemblies");
+        Console.WriteLine("Verifying Assemblies");
         var assembliesOutputDirPath = AssembliesDirPath;
         Directory.CreateDirectory(assembliesOutputDirPath);
 
+        // Clone Stardew Valley assemblies
+        Console.WriteLine("Cloning Stardew Valley assemblies");
+        var stardewStore = new AssemblyStoreExplorer(StardewApkTool.BaseApkPath, keepStoreInMemory: true);
+        foreach (var asm in stardewStore.Assemblies)
         {
-            Console.WriteLine("try clone stardew assemblies");
-            //clone dlls Stardew Valley 
-            var store = new AssemblyStoreExplorer(StardewApkTool.BaseApkPath, keepStoreInMemory: true);
-            foreach (var asm in store.Assemblies)
-            {
-                asm.ExtractImage(assembliesOutputDirPath);
-            }
-            Console.WriteLine("done clone stardew assemblies");
+            asm.ExtractImage(assembliesOutputDirPath);
         }
+        Console.WriteLine("Finished cloning Stardew Valley assemblies");
 
+        // Clone SMAPI Game Loader assemblies
+        Console.WriteLine("Cloning SMAPI Game Loader assemblies");
+        var appInfo = Application.Context.ApplicationInfo;
+        var smapiStore = new AssemblyStoreExplorer(appInfo.PublicSourceDir, keepStoreInMemory: true);
+        foreach (var asm in smapiStore.Assemblies)
         {
-            Console.WriteLine("try clone SMAPI Game Loader Assemblies");
-            //clone dll & no trimming from this app 
-            var appInfo = Application.Context.ApplicationInfo;
-            var store = new AssemblyStoreExplorer(appInfo.PublicSourceDir, keepStoreInMemory: true);
-            foreach (var asm in store.Assemblies)
-            {
-                asm.ExtractImage(assembliesOutputDirPath);
-            }
-            Console.WriteLine("done clone SMAPI Game Loader Assemblies");
+            asm.ExtractImage(assembliesOutputDirPath);
         }
+        Console.WriteLine("Finished cloning SMAPI Game Loader assemblies");
     }
+
     public static Assembly LoadAssembly(string dllFileName)
     {
         return Assembly.LoadFrom(Path.Combine(AssembliesDirPath, dllFileName));
     }
 
     static string LibDirPath => Path.Combine(FileTool.ExternalFilesDir, "lib");
+
     internal static void VerifyLibs()
     {
-        Console.WriteLine("try setup libs");
-        //clean lib first
-        Console.WriteLine("clean up lib dir");
+        Console.WriteLine("Setting up libraries");
+
+        // Clean up the library directory
+        Console.WriteLine("Cleaning up library directory");
         if (Directory.Exists(LibDirPath))
+        {
             Directory.Delete(LibDirPath, true);
-        Console.WriteLine("done setup libs");
+        }
+        Console.WriteLine("Finished setting up libraries");
     }
 }

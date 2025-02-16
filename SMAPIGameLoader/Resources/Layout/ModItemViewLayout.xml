@@ -24,7 +24,7 @@
         android:textSize="14sp"
         android:fontFamily="sans-serif" />
 
-	<!-- Version -->
+	<!-- Path -->
 	<TextView
         android:id="@+id/folderPath"
         android:layout_width="match_parent"

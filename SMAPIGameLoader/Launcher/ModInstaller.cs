@@ -1,5 +1,4 @@
 using Android.App;
-using Java.Lang.Ref;
 using Newtonsoft.Json.Linq;
 using SMAPIGameLoader.Tool;
 using System;
@@ -45,7 +44,7 @@ internal static class ModInstaller
     }
 
     // Assert if the mod is supported by checking game and SMAPI versions
-    public static bool AssertModISupport(JObject manifest)
+    public static bool AssertModIsSupported(JObject manifest)
     {
         if (!SMAPIInstaller.IsInstalled)
         {
@@ -57,7 +56,7 @@ internal static class ModInstaller
         var minGameVersion = GetMinGameVersion(manifest);
         if (minGameVersion != null && minGameVersion < new Version(1, 6, 0))
         {
-            ToastNotifyTool.Notify("Game version 1.6 is not supported.");
+            ToastNotifyTool.Notify("Game version is not supported.");
             return false;
         }
 
@@ -65,7 +64,7 @@ internal static class ModInstaller
         var minSMAPIVersion = GetMinSMAPIVersion(manifest);
         if (minSMAPIVersion != null && minSMAPIVersion < new Version(4, 0, 0))
         {
-            ToastNotifyTool.Notify("SMAPI Versions is outdated.");
+            ToastNotifyTool.Notify("SMAPI version is outdated.");
             return false;
         }
 
@@ -82,7 +81,7 @@ internal static class ModInstaller
 
         // Log the installed mods
         var entries = zip.Entries;
-        var manifestEntries = entries.Where(entry => entry.Name == ModTool.ManifiestFileName).ToArray();
+        var manifestEntries = entries.Where(entry => entry.Name == ModTool.ManifestFileName).ToArray();
         var logBuilder = new StringBuilder();
         var fileInfo = new FileInfo(zipFilePath);
         logBuilder.AppendLine("Mod zip: " + fileInfo.Name);
@@ -91,7 +90,7 @@ internal static class ModInstaller
         for (int i = 0; i < manifestEntries.Length; i++)
         {
             var manifestEntry = manifestEntries[i];
-            var modDir = manifestEntry.FullName.Replace($"/{ModTool.ManifiestFileName}", "");
+            var modDir = manifestEntry.FullName.Replace($"/{ModTool.ManifestFileName}", "");
             var dirInfo = new DirectoryInfo(modDir);
             logBuilder.AppendLine($"[{i + 1}]: {dirInfo.Name}");
         }
@@ -111,7 +110,7 @@ internal static class ModInstaller
 
             using var zip = ZipFile.OpenRead(pickFile.FullPath);
             var entries = zip.Entries;
-            var manifestEntries = entries.Where(entry => entry.Name == ModTool.ManifiestFileName).ToArray();
+            var manifestEntries = entries.Where(entry => entry.Name == ModTool.ManifestFileName).ToArray();
             if (manifestEntries.Length == 0)
             {
                 ToastNotifyTool.Notify("Manifest.json not found");
@@ -213,7 +212,7 @@ internal static class ModInstaller
         {
             Console.WriteLine(ex);
             ErrorDialogTool.Show(ex);
-            return true;
+            return false;
         }
     }
 }

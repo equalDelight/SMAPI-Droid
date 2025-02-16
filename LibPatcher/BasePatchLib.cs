@@ -18,24 +18,24 @@ internal class PatchData
 
     public PatchData(string exportFuncName, int offset, byte[] patchBytes)
     {
-        this.ExportFunctionName = exportFuncName;
-        this.Offset = offset;
-        this.PatchBytes = patchBytes;
+        ExportFunctionName = exportFuncName;
+        Offset = offset;
+        PatchBytes = patchBytes;
     }
 }
 
 internal abstract class BasePatchLib
 {
     public readonly PlatformEnum platform;
-    public readonly string PackageDirPath = @"C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Runtime.Mono.android";
+    public readonly string PackageDirPath;
     public const string LibSrcFileName = "libmonosgen-2.0.so";
     public readonly string LibSrcPath;
 
     public const string LibOriginalBackupFileName = "libmonosgen-2.0-original.so";
-    public readonly string LibOrigialBackupFilePath;
+    public readonly string LibOriginalBackupFilePath;
 
-    public readonly string LibModifyOutputFileName = "libmonosgen-2.0-modify.so";
-    public string LibModifyOutputFilePath { get => LibModifyOutputFileName; }
+    public readonly string LibModifyOutputFileName;
+    public string LibModifyOutputFilePath => LibModifyOutputFileName;
 
     public ISymbolTable dynamicSymbolTable;
     public IELF LibReader;
@@ -46,56 +46,55 @@ internal abstract class BasePatchLib
     {
         this.platform = platform;
 
+        // Set paths based on platform
         if (platform == PlatformEnum.Arm64)
         {
-            PackageDirPath += "-arm64";
-            LibModifyOutputFileName = LibModifyOutputFileName.Replace(".so", "-arm64.so");
+            PackageDirPath = @"C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Runtime.Mono.android-arm64";
+            LibModifyOutputFileName = "libmonosgen-2.0-modify-arm64.so";
             LibSrcPath = Path.Combine(PackageDirPath, @"8.0.10\runtimes\android-arm64\native", LibSrcFileName);
         }
         else
         {
-            PackageDirPath += "-x64";
+            PackageDirPath = @"C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Runtime.Mono.android-x64";
+            LibModifyOutputFileName = "libmonosgen-2.0-modify-x64.so";
             LibSrcPath = Path.Combine(PackageDirPath, @"8.0.10\runtimes\android-x64\native", LibSrcFileName);
-            LibModifyOutputFileName = LibModifyOutputFileName.Replace(".so", "-x64.so");
         }
 
-        LibOrigialBackupFilePath = LibSrcPath.Replace(LibSrcFileName, LibOriginalBackupFileName);
+        LibOriginalBackupFilePath = LibSrcPath.Replace(LibSrcFileName, LibOriginalBackupFileName);
 
-        //Start
+        // Start patching process
         Run();
 
-        //End & post build
+        // Post build actions
         PostBuild();
 
-        Console.WriteLine("Successfully Patch Lib on: " + this.GetType());
+        Console.WriteLine("Successfully patched library on: " + GetType());
     }
 
     void Run()
     {
+        Console.WriteLine("Start running patch library on: " + GetType());
 
-        Console.WriteLine("Start Run Patch Lib On: " + this.GetType());
+        // Clone original file if backup does not exist
+        if (!File.Exists(LibOriginalBackupFilePath))
+            File.Copy(LibSrcPath, LibOriginalBackupFilePath);
 
-        //clone original first
-        if (File.Exists(LibOrigialBackupFilePath) is false)
-            File.Copy(LibSrcPath, LibOrigialBackupFilePath);
-
-        //check verify original file hash
-        var fileHash = ComputeSHA256(LibOrigialBackupFilePath);
+        // Verify original file hash
+        var fileHash = ComputeSHA256(LibOriginalBackupFilePath);
         var hashTarget = GetLibHashTarget();
         if (fileHash != hashTarget)
         {
-            Console.WriteLine("file hash not match to: " + hashTarget);
+            Console.WriteLine("File hash does not match: " + hashTarget);
             Exit();
         }
 
-        //clone into local app
-        //1 lib-modify.so
-        File.Copy(LibOrigialBackupFilePath, LibModifyOutputFileName, true);
+        // Clone into local app
+        File.Copy(LibOriginalBackupFilePath, LibModifyOutputFileName, true);
 
-        Console.WriteLine("original hash: " + ComputeSHA256(LibOrigialBackupFilePath));
+        Console.WriteLine("Original hash: " + ComputeSHA256(LibOriginalBackupFilePath));
 
-        //setup elf reader
-        LibReader = ELFReader.Load(LibOrigialBackupFilePath);
+        // Setup ELF reader
+        LibReader = ELFReader.Load(LibOriginalBackupFilePath);
         dynamicSymbolTable = LibReader.GetSection(".dynsym") as ISymbolTable;
         foreach (SymbolEntry<UInt64> item in dynamicSymbolTable.Entries)
         {
@@ -105,46 +104,43 @@ internal abstract class BasePatchLib
             }
         }
 
-        //setup writer
+        // Setup writer
         LibWriter = File.Open(LibModifyOutputFileName, FileMode.Open, FileAccess.ReadWrite);
 
-
-        //ready patch all
-        PatchData[] patches = [
+        // Ready to patch all
+        PatchData[] patches = {
             Patch_FieldAccessException(),
             Patch_MethodAccessException(),
             Patch_mono_class_from_mono_type_internalCrashFix(),
-        ];
+        };
         foreach (var patchData in patches)
         {
             var funcVAFile = (long)GetFunctionOffsetVAFile(patchData.ExportFunctionName);
             var patchFileOffset = funcVAFile + patchData.Offset;
 
-            Console.WriteLine($"Try patch: {patchData.ExportFunctionName}" +
+            Console.WriteLine($"Trying to patch: {patchData.ExportFunctionName}" +
                 $" file offset: 0x{patchData.Offset:X}" +
                 $" byte length: {patchData.PatchBytes.Length}" +
                 $" patch file offset: 0x{patchFileOffset:X}");
             WriteByteArray(patchFileOffset, patchData.PatchBytes);
         }
 
-
-        //cleanup
+        // Cleanup
         LibWriter.Close();
         LibReader.Dispose();
 
-        Console.WriteLine($"New modify {LibModifyOutputFileName} hash: {ComputeSHA256(LibModifyOutputFileName)}");
+        Console.WriteLine($"New modified {LibModifyOutputFileName} hash: {ComputeSHA256(LibModifyOutputFileName)}");
     }
 
     void PostBuild()
     {
-        //copy push lib modify into package dir lib
-        //error can't access file path
-        //need admin permission
-        Console.WriteLine("Starting Post Build...");
-        Console.WriteLine($"Try copy {LibModifyOutputFilePath} to {LibSrcPath}");
+        // Copy modified library into package directory
+        Console.WriteLine("Starting post build...");
+        Console.WriteLine($"Trying to copy {LibModifyOutputFilePath} to {LibSrcPath}");
         File.Copy(LibModifyOutputFilePath, LibSrcPath, true);
-        Console.WriteLine("Done Post Build");
+        Console.WriteLine("Post build completed");
     }
+
     protected abstract PatchData Patch_FieldAccessException();
     protected abstract PatchData Patch_MethodAccessException();
     protected abstract PatchData Patch_mono_class_from_mono_type_internalCrashFix();
@@ -152,26 +148,26 @@ internal abstract class BasePatchLib
 
     internal void Exit()
     {
-        Console.WriteLine("Press Any Key To Exit..");
+        Console.WriteLine("Press any key to exit...");
         Console.Read();
         Environment.Exit(0);
     }
+
     internal ulong GetFunctionOffsetVASection(string name) => GetFunctionOffsetVASection(GetFunction(name));
     internal ulong GetFunctionOffsetVASection(SymbolEntry<UInt64> func)
     {
         return func.Value - func.PointedSection.Offset;
     }
+
     internal ulong GetFunctionOffsetVAFile(string name)
     {
         var func = GetFunction(name);
         var section = func.PointedSection;
         var offsetOnSection = GetFunctionOffsetVASection(func);
 
-        var headerSize = section.Size;
-        var headerOffset = section.Offset;
-
-        return headerOffset + offsetOnSection;
+        return section.Offset + offsetOnSection;
     }
+
     internal byte[] ReadByteArrayFromFunction(SymbolEntry<UInt64> func, int readOffset, int readCount)
     {
         var section = func.PointedSection;
@@ -182,29 +178,35 @@ internal abstract class BasePatchLib
         Array.Copy(sectionData, (int)funcOffset + readOffset, result, 0, readCount);
         return result;
     }
+
     internal SymbolEntry<UInt64> GetFunction(string name) => monoMethodMap[name];
+
     internal void WriteByteArray(long start, byte[] bytes)
     {
         LibWriter.Seek(start, SeekOrigin.Begin);
         LibWriter.Write(bytes);
     }
+
     internal void ReadByteArray(byte[] bytes, long start)
     {
         LibWriter.Seek(start, SeekOrigin.Begin);
         LibWriter.Read(bytes);
     }
+
     internal void DumpHex(byte[] bytes, int start, int length)
     {
         byte[] crop = new byte[length];
         Array.Copy(bytes, start, crop, 0, length);
         DumpHex(crop);
     }
+
     internal void DumpHex(int start, int length)
     {
         byte[] bytes = new byte[length];
         ReadByteArray(bytes, start);
         DumpHex(bytes);
     }
+
     internal void DumpHex(byte[] bytes, int dumpRowLength = 4)
     {
         Console.WriteLine("===== Dump Memory =====");
@@ -214,7 +216,7 @@ internal abstract class BasePatchLib
         {
             byte value = bytes[i];
 
-            //new line
+            // New line
             if (x == dumpRowLength)
             {
                 sb.Append("\n");
@@ -227,6 +229,7 @@ internal abstract class BasePatchLib
         Console.WriteLine(sb.ToString());
         Console.WriteLine("===== End Dump Memory =====");
     }
+
     internal string ComputeSHA256(string filePath)
     {
         using var sha256 = SHA256.Create();
@@ -239,4 +242,3 @@ internal abstract class BasePatchLib
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
     }
 }
-

@@ -1,45 +1,47 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
-using System.Text.Json.Nodes;
 
 namespace SMAPIGameLoader.Launcher;
 
 public class ModItemView
 {
-    public string NameText = "Unknow";
-    public string VersionText = "Unknow";
-    public string FolderPathText = "Unknow";
+    public string NameText { get; private set; } = "Unknown";
+    public string VersionText { get; private set; } = "Unknown";
+    public string FolderPathText { get; private set; } = "Unknown";
 
-    public readonly string modName = "unknow";
-    public readonly string modVersion = "unknow";
-    public readonly string modFolderPath = "unknow";
+    public readonly string modName = "unknown";
+    public readonly string modVersion = "unknown";
+    public readonly string modFolderPath = "unknown";
 
     public ModItemView(string manifestFilePath, int modListIndex)
     {
         try
         {
+            // Read and parse the manifest file
             var manifestText = File.ReadAllText(manifestFilePath);
             var manifest = JObject.Parse(manifestText);
 
-            this.modName = manifest["Name"].ToString();
-            this.modVersion = manifest["Version"].ToString();
+            modName = manifest["Name"].ToString();
+            modVersion = manifest["Version"].ToString();
 
-            this.NameText = $"[{modListIndex + 1}]: {modName}";
-            this.VersionText = $"Version: {modVersion}";
+            NameText = $"[{modListIndex + 1}]: {modName}";
+            VersionText = $"Version: {modVersion}";
 
-            this.modFolderPath = Path.GetDirectoryName(manifestFilePath);
-            var relativeModDir = modFolderPath.Substring(modFolderPath.IndexOf("/Mods") + 5);
+            modFolderPath = Path.GetDirectoryName(manifestFilePath);
+            var relativeModDir = modFolderPath.Substring(modFolderPath.IndexOf("/Mods") + 6);
             FolderPathText = $"Folder: {relativeModDir}";
         }
         catch (Exception ex)
         {
-            this.modFolderPath = Path.GetDirectoryName(manifestFilePath);
+            // Handle exceptions and set folder path
+            modFolderPath = Path.GetDirectoryName(manifestFilePath);
             FolderPathText = modFolderPath;
-            ErrorDialogTool.Show(ex, "Error try parser mod folder path: " + this.modFolderPath);
+            ErrorDialogTool.Show(ex, "Error trying to parse mod folder path: " + modFolderPath);
         }
 
-        this.NameText = $"[{modListIndex + 1}]: {modName}";
-        this.VersionText = $"Version: {modVersion}";
+        // Ensure NameText and VersionText are set even if an exception occurs
+        NameText = $"[{modListIndex + 1}]: {modName}";
+        VersionText = $"Version: {modVersion}";
     }
 }

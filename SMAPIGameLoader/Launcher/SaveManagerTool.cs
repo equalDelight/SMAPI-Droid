@@ -13,7 +13,13 @@ namespace SMAPIGameLoader.Launcher;
 internal static class SaveManager
 {
     const string SavesDirName = "Saves";
+    const string SaveGameInfo_FileName = "SaveGameInfo";
+    const string EMERGENCY_SAVE_FileName = "EMERGENCY_SAVE";
+
+    // Get the directory path for saves
     public static string GetSavesDir() => Path.Combine(FileTool.ExternalFilesDir, SavesDirName);
+
+    // Handle the import save zip button click event
     public static void OnClickImportSaveZip(object sender, EventArgs args)
     {
         try
@@ -26,31 +32,30 @@ internal static class SaveManager
         }
     }
 
-    const string SaveGameInfo_FileName = "SaveGameInfo";
-
+    // Import save zip file internally
     static async void ImportSaveZipInternal()
     {
         var pick = await FilePickerTool.PickZipFile();
         if (pick is null)
             return;
 
-        if (pick.FileName is not "Saves.zip")
+        if (pick.FileName != "Saves.zip")
         {
-            DialogTool.Show("Save Importer Error", "Please pick file Saves.zip!!");
+            DialogTool.Show("Save Importer Error", "Please pick the file Saves.zip!!");
             return;
         }
 
-        //extract it
+        // Extract the zip file
         HashSet<string> savesImportHashset = new();
 
         using (var zip = ZipFile.OpenRead(pick.FullPath))
         {
             var savesDirPath = GetSavesDir();
             const string SkipEntrySavesName = SavesDirName + "/";
-            var entires = zip.Entries.ToArray();
-            foreach (var entry in entires)
+            var entries = zip.Entries.ToArray();
+            foreach (var entry in entries)
             {
-                //skip entry name folder 'Saves/'
+                // Skip entry name folder 'Saves/'
                 if (entry.FullName == SkipEntrySavesName)
                     continue;
 
@@ -72,37 +77,37 @@ internal static class SaveManager
                 }
             }
 
-            //options safety first
+            // Remove emergency save file for safety
             RemoveEmergencySaveFile();
         }
 
-        //clean up cache after pick file
+        // Clean up cache after picking the file
         FileTool.ClearCache();
 
+        // Build the success message
         StringBuilder sbSaveImported = new();
-        sbSaveImported.AppendLine($"Successfully import saves {savesImportHashset.Count}");
+        sbSaveImported.AppendLine($"Successfully imported {savesImportHashset.Count} saves");
 
+        int saveIndexCounter = 0;
+        foreach (var saveDirName in savesImportHashset)
         {
-            int saveIndexCounter = 0;
-            foreach (var saveDirName in savesImportHashset)
-            {
-                saveIndexCounter++;
-                sbSaveImported.AppendLine($"[{saveIndexCounter}] {saveDirName}");
-            }
+            saveIndexCounter++;
+            sbSaveImported.AppendLine($"[{saveIndexCounter}] {saveDirName}");
         }
 
         DialogTool.Show("Save Importer", sbSaveImported.ToString());
     }
+
+    // Import save zip file
     public static bool ImportSaveZip(FileResult pick)
     {
-        if (pick.FileName.EndsWith(".zip"))
+        if (!pick.FileName.EndsWith(".zip"))
             return false;
-
 
         return true;
     }
 
-    const string EMERGENCY_SAVE_FileName = "EMERGENCY_SAVE";
+    // Remove the emergency save file
     public static void RemoveEmergencySaveFile()
     {
         string filePath = Path.Combine(GetSavesDir(), EMERGENCY_SAVE_FileName);

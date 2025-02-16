@@ -5,10 +5,12 @@ using System;
 using System.Threading.Tasks;
 
 namespace SMAPIGameLoader;
+
 internal static class EntryGame
 {
     public static void LaunchGameActivity(Activity launcherActivity)
     {
+        // Run the game launch process asynchronously
         TaskTool.Run(launcherActivity, async () =>
         {
             await LaunchGameActivityInternalAsync(launcherActivity);
@@ -18,41 +20,45 @@ internal static class EntryGame
     static async Task LaunchGameActivityInternalAsync(Activity launcherActivity)
     {
         //ToastNotifyTool.Notify("Starting Game..");
-        //check game it's can launch with version
-
         try
         {
+            // Check if the game version is supported
             if (!StardewApkTool.IsGameVersionSupport)
             {
-                ToastNotifyTool.Notify("Your current game version (" + StardewApkTool.CurrentGameVersion + ") is not supported, please update the game to the latest version.");
+                ToastNotifyTool.Notify($"Your current game version ({StardewApkTool.CurrentGameVersion}) is not supported, please update the game to the latest version.");
                 return;
             }
 
+            // Check if SMAPI is installed
             if (!SMAPIInstaller.IsInstalled)
             {
                 ToastNotifyTool.Notify("Please install SMAPI.");
                 return;
             }
 
+            // Setup game cloning
             GameCloner.Setup();
 
 #if DEBUG
-            ToastNotifyTool.Notify("Error can't start the game on Debug Mode");
+            // Notify and return if in Debug mode
+            ToastNotifyTool.Notify("Error: Can't start the game in Debug Mode");
             return;
 #endif
+            // Start SMAPI activity
             StartSMAPIActivity(launcherActivity);
         }
         catch (Exception ex)
         {
-            ToastNotifyTool.Notify("Error: LaunchGameActivity: " + ex.ToString());
+            // Notify if an error occurs
+            ToastNotifyTool.Notify($"Error: LaunchGameActivity: {ex}");
         }
     }
 
     static void StartSMAPIActivity(Activity launcherActivity)
     {
+        // Create an intent to start the SMAPI activity
         var intent = new Intent(launcherActivity, typeof(SMAPIActivity));
-        intent.AddFlags(ActivityFlags.ClearTask);
-        intent.AddFlags(ActivityFlags.NewTask);
+        intent.AddFlags(ActivityFlags.ClearTask | ActivityFlags.NewTask);
         launcherActivity.StartActivity(intent);
         launcherActivity.Finish();
     }
