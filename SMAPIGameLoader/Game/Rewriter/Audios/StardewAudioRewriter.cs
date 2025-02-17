@@ -1,23 +1,27 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SMAPIGameLoader.Game.Rewriter;
-
-internal static class StardewAudioRewriter
+namespace SMAPIGameLoader.Game.Rewriter.Audios
 {
-    internal static void Rewrite(AssemblyDefinition stardewAssemblyDef)
+    internal static class StardewAudioRewriter
     {
-        try
+        // Method to rewrite the Stardew Assembly for audio modifications
+        internal static void Rewrite(AssemblyDefinition stardewAssemblyDef)
         {
-        }
-        catch (Exception e)
-        {
-            ErrorDialogTool.Show(e, nameof(StardewAudioRewriter));
-            throw;
+            if (stardewAssemblyDef == null)
+                throw new ArgumentNullException(nameof(stardewAssemblyDef), "Assembly definition cannot be null.");
+
+            try
+            {
+                // Add your code here to modify the assembly for audio purposes
+                // Example: Modify methods, fields, properties, etc.
+            }
+            catch (Exception e)
+            {
+                // Show the error dialog and rethrow the exception for further handling
+                ErrorDialogTool.Show(e, nameof(StardewAudioRewriter));
+                throw;
+            }
         }
     }
 }
