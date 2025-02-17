@@ -1,28 +1,37 @@
-﻿using Android.Webkit;
 using HarmonyLib;
 using Microsoft.Xna.Framework.Audio;
-using StardewValley.Audio;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SMAPIGameLoader.Game.Rewriter;
-
-public static class AudioEngineWrapperMethods
+namespace SMAPIGameLoader.Game.Rewriter.Audios
 {
-    public static int GetCategoryIndex(object audioEngine, string name)
+    public static class AudioEngineWrapperMethods
     {
-        var _categories = AccessTools.Field(typeof(AudioEngine), "_categories").GetValue(audioEngine) as AudioCategory[];
-
-        for (int i = 0; i < _categories.Length; i++)
+        // Method to get the index of an audio category by its name
+        public static int GetCategoryIndex(object audioEngine, string name)
         {
-            if (_categories[i].Name == name)
+            if (audioEngine == null) 
+                throw new ArgumentNullException(nameof(audioEngine));
+            
+            if (string.IsNullOrWhiteSpace(name)) 
+                throw new ArgumentException("Category name cannot be null or whitespace.", nameof(name));
+
+            // Access the private _categories field from the AudioEngine class using Harmony
+            var categoriesField = AccessTools.Field(typeof(AudioEngine), "_categories");
+            var categories = categoriesField.GetValue(audioEngine) as AudioCategory[];
+
+            if (categories == null)
+                throw new InvalidOperationException("Unable to retrieve audio categories.");
+
+            // Search for the category by name
+            for (int i = 0; i < categories.Length; i++)
             {
-                return i;
+                if (categories[i].Name == name)
+                {
+                    return i;
+                }
             }
+
+            return -1; // Return -1 if the category is not found
         }
-        return -1;
     }
 }
